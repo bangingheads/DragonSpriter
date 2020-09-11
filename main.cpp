@@ -11,6 +11,8 @@
 #include <string>
 #include <map>
 #include <fstream>
+#include <vector>
+#include <set>
 namespace fs = std::filesystem;
 
 struct img_data
@@ -37,7 +39,7 @@ struct output_data
 	std::map<std::string, img_data_map> result;
 };
 
-void copy_to_texture(uint8_t* texture, size_t texture_x, size_t texture_y, size_t sprite_count_x, size_t sprite_size, const uint8_t* input_data, size_t input_width, size_t input_height)
+void copy_to_texture(uint8_t *texture, size_t texture_x, size_t texture_y, size_t sprite_count_x, size_t sprite_size, const uint8_t *input_data, size_t input_width, size_t input_height)
 {
 	static const stbir_edge edge = stbir_edge::STBIR_EDGE_CLAMP;
 	static const stbir_filter filter = stbir_filter::STBIR_FILTER_BOX;
@@ -48,10 +50,10 @@ void copy_to_texture(uint8_t* texture, size_t texture_x, size_t texture_y, size_
 	stbir_resize_uint8(input_data, input_width, input_height, source_stride, texture + texture_y * sprite_size * target_stride + texture_x * sprite_size * 3, sprite_size, sprite_size, target_stride, 3);
 }
 
-void write_to_texture_file(const std::string& set_name, size_t sprite_count_x, size_t sprite_count_y, size_t sprite_size, const std::string& texture_id, const uint8_t* texture, std::vector<std::string>& errors)
+void write_to_texture_file(const std::string &set_name, size_t sprite_count_x, size_t sprite_count_y, size_t sprite_size, const std::string &texture_id, const uint8_t *texture, std::vector<std::string> &errors)
 {
 	std::string file_name = std::string("img/sprite/") + set_name + texture_id + ".png";
-	
+
 	fs::path parent_folder = fs::path(file_name).parent_path();
 	if (fs::exists(parent_folder) == false)
 		fs::create_directories(parent_folder);
@@ -60,7 +62,7 @@ void write_to_texture_file(const std::string& set_name, size_t sprite_count_x, s
 		errors.push_back("Unable to write file '" + file_name + "'");
 }
 
-void write_image_data(img_data::size_data& size_data, const std::string& texture_name, size_t sprite_size, size_t texture_x, size_t texture_y, size_t texture_id)
+void write_image_data(img_data::size_data &size_data, const std::string &texture_name, size_t sprite_size, size_t texture_x, size_t texture_y, size_t texture_id)
 {
 	size_data.texture = texture_name + std::to_string(texture_id);
 	size_data.x = texture_x * sprite_size;
@@ -68,7 +70,7 @@ void write_image_data(img_data::size_data& size_data, const std::string& texture
 	size_data.width = size_data.height = sprite_size;
 }
 
-void write_image(const fs::path root, std::map<std::string, img_data>& image_data, const char* set_name, size_t sprite_count_x, size_t sprite_count_y, std::vector<std::string>& errors)
+void write_image(const fs::path root, std::map<std::string, img_data> &image_data, const char *set_name, size_t sprite_count_x, size_t sprite_count_y, std::vector<std::string> &errors)
 {
 	static const size_t sprite_size = 48;
 	static const size_t small_sprite_size = 36;
@@ -93,14 +95,18 @@ void write_image(const fs::path root, std::map<std::string, img_data>& image_dat
 	std::string small_texture_name = "small_" + texture_name;
 	std::string tiny_texture_name = "tiny_" + texture_name;
 
-	for (auto& file : fs::recursive_directory_iterator(set_path))
+	std::set<fs::directory_entry> sorted_by_name;
+	for (auto &entry : fs::directory_iterator(set_path))
+		sorted_by_name.insert(entry);
+
+	for (auto &file : sorted_by_name)
 	{
 		if (file.is_regular_file() == false)
 			continue;
 
 		// Load texture
 		int input_width, input_height, bpp;
-		uint8_t* input_data = stbi_load(file.path().generic_string().c_str(), &input_width, &input_height, &bpp, 3);
+		uint8_t *input_data = stbi_load(file.path().generic_string().c_str(), &input_width, &input_height, &bpp, 3);
 		if (input_data == nullptr)
 		{
 			errors.push_back("Unable to read '" + file.path().generic_string() + "'.");
@@ -156,34 +162,23 @@ void write_image(const fs::path root, std::map<std::string, img_data>& image_dat
 	}
 }
 
-void to_json(std::string& out, const std::string& in)
+void to_json(std::string &out, const std::string &in)
 {
 	out += "\"" + in + "\"";
 }
 
-void to_json(std::string& out, size_t in)
+void to_json(std::string &out, size_t in)
 {
 	out += std::to_string(in);
 }
 
-template<typename T>
-void to_json_keyval(std::string& out, const std::string& key, const T& value, bool last)
-{
-	out += "\"" + key + "\":";
-
-	to_json(out, value);
-
-	if (last == false)
-		out += ",";
-}
-
-template<typename T>
-void to_json(std::string& out, const std::vector<T>& array)
+template <typename T>
+void to_json(std::string &out, const std::vector<T> &array)
 {
 	out += "[";
 
 	bool first = true;
-	for (auto& entry : array)
+	for (auto &entry : array)
 	{
 		if (first)
 			first = false;
@@ -193,11 +188,21 @@ void to_json(std::string& out, const std::vector<T>& array)
 		to_json(out, entry);
 	}
 
-
 	out += "]";
 }
 
-void to_json(std::string& out, const img_data::size_data& in)
+template <typename T>
+void to_json_keyval(std::string &out, const std::string &key, const T &value, bool last)
+{
+	out += "\"" + key + "\":";
+
+	to_json(out, value);
+
+	if (last == false)
+		out += ",";
+}
+
+void to_json(std::string &out, const img_data::size_data &in)
 {
 	out += "{";
 
@@ -210,7 +215,7 @@ void to_json(std::string& out, const img_data::size_data& in)
 	out += "}";
 }
 
-void to_json(std::string& out, const img_data& in)
+void to_json(std::string &out, const img_data &in)
 {
 	out += "{";
 
@@ -221,23 +226,13 @@ void to_json(std::string& out, const img_data& in)
 	out += "}";
 }
 
-void to_json(std::string& out, const output_data& in)
-{
-	out += "{";
-
-	to_json_keyval(out, "errors", in.errors, false);
-	to_json_keyval(out, "result", in.result, true);
-
-	out += "}";
-}
-
-template<typename T>
-void to_json(std::string& out, const std::map<std::string, T>& map)
+template <typename T>
+void to_json(std::string &out, const std::map<std::string, T> &map)
 {
 	out += "{";
 
 	bool first = true;
-	for (auto& pair : map)
+	for (auto &pair : map)
 	{
 		if (first)
 			first = false;
@@ -247,26 +242,34 @@ void to_json(std::string& out, const std::map<std::string, T>& map)
 		to_json_keyval(out, pair.first, pair.second, true);
 	}
 
+	out += "}";
+}
+
+void to_json(std::string &out, const output_data &in)
+{
+	out += "{";
+
+	to_json_keyval(out, "errors", in.errors, false);
+	to_json_keyval(out, "result", in.result, true);
 
 	out += "}";
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 	fs::path root = (argc > 1) ? argv[1] : "/";
 
 	output_data output;
 	init_data datas[] =
-	{
-		{ "champion", 10, 3 },
-		{ "item", 10, 10 },
-		{ "map", 6, 6 }, // Don't know the Y of this, so I'm assuming it's simply square.
-		{ "mission", 10, 20 }, // Possibly infinite Y?
-		{ "passive", 10, 3 },
-		{ "spell", 10, 4 }
-	};
+		{
+			{"champion", 10, 3},
+			{"item", 10, 10},
+			{"map", 6, 6},		 // Don't know the Y of this, so I'm assuming it's simply square.
+			{"mission", 10, 20}, // Possibly infinite Y?
+			{"passive", 10, 3},
+			{"spell", 10, 4}};
 
-	for (auto& init : datas)
+	for (auto &init : datas)
 		write_image(root, output.result[init.name], init.name.c_str(), init.x, init.y, output.errors);
 
 	std::string json;
