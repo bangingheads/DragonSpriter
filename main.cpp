@@ -267,6 +267,7 @@ int main(int argc, char **argv)
 			{"map", 6, 6},		 // Don't know the Y of this, so I'm assuming it's simply square.
 			{"mission", 10, 20}, // Possibly infinite Y?
 			{"passive", 10, 3},
+			{"profileicon", 10, 300}, //Seems to be infinite Y
 			{"spell", 10, 4}};
 
 	for (auto &init : datas)
