@@ -96,7 +96,7 @@ void write_image(const fs::path root, std::map<std::string, img_data> &image_dat
 	std::string tiny_texture_name = "tiny_" + texture_name;
 
 	std::set<fs::directory_entry> sorted_by_name;
-	for (auto &entry : fs::directory_iterator(set_path))
+	for (auto &entry : fs::recursive_directory_iterator(set_path))
 		sorted_by_name.insert(entry);
 
 	for (auto &file : sorted_by_name)
